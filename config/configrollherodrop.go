@@ -9,26 +9,27 @@ import (
 )
 
 var typedefsRollHeroDrop="int	int	int	int	int	int	int	int	int	int"
-var iddefsRollHeroDrop="id	group_id	typeid	param	count	seed	lucky_add	lucky_full	seed_change	combine_group"
+var iddefsRollHeroDrop="Id	Group_id	Typeid	Param	Count	Seed	Lucky_add	Lucky_full	Seed_change	Combine_group"
 
 type RollHeroDrop struct {
-	   id		int
-	   group_id		int
-	   typeid		int
-	   param		int
-	   count		int
-	   seed		int
-	   lucky_add		int
-	   lucky_full		int
-	   seed_change		int
-	   combine_group		int
+	   Id		int
+	   Group_id		int
+	   Typeid		int
+	   Param		int
+	   Count		int
+	   Seed		int
+	   Lucky_add		int
+	   Lucky_full		int
+	   Seed_change		int
+	   Combine_group		int
 }
 
 type RollHeroDropMgr struct {
-	   mapdata 		map[int] RollHeroDrop
+	   mapdata 		map[int] *RollHeroDrop
 }
 
 func (config *RollHeroDropMgr) Load() {
+	config.mapdata = make(map[int] *RollHeroDrop)
 	fi, err := os.Open("config/RollHeroDrop.txt")
 	if err != nil {
 		panic(err)
@@ -77,21 +78,36 @@ func (config *RollHeroDropMgr) Load() {
 	}
 }
 
-func (*RollHeroDropMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
+func (config *RollHeroDropMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
 	datacols := strings.Split(dataline, "\t")
 	datastruct := new(RollHeroDrop)
 	if len(datatypes) != len(datacols) {
 		fmt.Printf("read data error %!s(MISSING) \n", dataline)
 		return
     }
-	datastruct.id=getIntValue(datacols[0])
-	datastruct.group_id=getIntValue(datacols[1])
-	datastruct.typeid=getIntValue(datacols[2])
-	datastruct.param=getIntValue(datacols[3])
-	datastruct.count=getIntValue(datacols[4])
-	datastruct.seed=getIntValue(datacols[5])
-	datastruct.lucky_add=getIntValue(datacols[6])
-	datastruct.lucky_full=getIntValue(datacols[7])
-	datastruct.seed_change=getIntValue(datacols[8])
-	datastruct.combine_group=getIntValue(datacols[9])
+	datastruct.Id=getIntValue(datacols[0])
+	datastruct.Group_id=getIntValue(datacols[1])
+	datastruct.Typeid=getIntValue(datacols[2])
+	datastruct.Param=getIntValue(datacols[3])
+	datastruct.Count=getIntValue(datacols[4])
+	datastruct.Seed=getIntValue(datacols[5])
+	datastruct.Lucky_add=getIntValue(datacols[6])
+	datastruct.Lucky_full=getIntValue(datacols[7])
+	datastruct.Seed_change=getIntValue(datacols[8])
+	datastruct.Combine_group=getIntValue(datacols[9])
+	config.mapdata[datastruct.Id]=datastruct
 }
+
+func (config *RollHeroDropMgr) UnLoad() {
+}
+
+func (config *RollHeroDropMgr) GetConfig( id int) *RollHeroDrop{
+	 data, ok := config.mapdata[id]
+	 if ok != true {
+		 return nil
+	 }
+	 return data
+}
+
+var RollHeroDropMgrInst = &RollHeroDropMgr{}
+

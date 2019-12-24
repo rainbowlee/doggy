@@ -9,21 +9,22 @@ import (
 )
 
 var typedefsRoleData="int	string	int	int	int"
-var iddefsRoleData="id	name	sex	defaulttext	love_itemid	max_level	cloth_id	qiyue_costid	qiyuecost_num"
+var iddefsRoleData="Id	Name	Sex	Defaulttext	Love_itemid	Max_level	Cloth_id	Qiyue_costid	Qiyuecost_num"
 
 type RoleData struct {
-	   id		int
-	   name		string
-	   sex		int
-	   defaulttext		int
-	   love_itemid		int
+	   Id		int
+	   Name		string
+	   Sex		int
+	   Defaulttext		int
+	   Love_itemid		int
 }
 
 type RoleDataMgr struct {
-	   mapdata 		map[int] RoleData
+	   mapdata 		map[int] *RoleData
 }
 
 func (config *RoleDataMgr) Load() {
+	config.mapdata = make(map[int] *RoleData)
 	fi, err := os.Open("config/RoleData.txt")
 	if err != nil {
 		panic(err)
@@ -72,16 +73,31 @@ func (config *RoleDataMgr) Load() {
 	}
 }
 
-func (*RoleDataMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
+func (config *RoleDataMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
 	datacols := strings.Split(dataline, "\t")
 	datastruct := new(RoleData)
 	if len(datatypes) != len(datacols) {
 		fmt.Printf("read data error %!s(MISSING) \n", dataline)
 		return
     }
-	datastruct.id=getIntValue(datacols[0])
-	datastruct.name=datacols[1]
-	datastruct.sex=getIntValue(datacols[2])
-	datastruct.defaulttext=getIntValue(datacols[3])
-	datastruct.love_itemid=getIntValue(datacols[4])
+	datastruct.Id=getIntValue(datacols[0])
+	datastruct.Name=datacols[1]
+	datastruct.Sex=getIntValue(datacols[2])
+	datastruct.Defaulttext=getIntValue(datacols[3])
+	datastruct.Love_itemid=getIntValue(datacols[4])
+	config.mapdata[datastruct.Id]=datastruct
 }
+
+func (config *RoleDataMgr) UnLoad() {
+}
+
+func (config *RoleDataMgr) GetConfig( id int) *RoleData{
+	 data, ok := config.mapdata[id]
+	 if ok != true {
+		 return nil
+	 }
+	 return data
+}
+
+var RoleDataMgrInst = &RoleDataMgr{}
+

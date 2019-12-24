@@ -9,18 +9,19 @@ import (
 )
 
 var typedefsLevelData="int	int64"
-var iddefsLevelData="id	exp"
+var iddefsLevelData="Id	Exp"
 
 type LevelData struct {
-	   id		int
-	   exp		int64
+	   Id		int
+	   Exp		int64
 }
 
 type LevelDataMgr struct {
-	   mapdata 		map[int] LevelData
+	   mapdata 		map[int] *LevelData
 }
 
 func (config *LevelDataMgr) Load() {
+	config.mapdata = make(map[int] *LevelData)
 	fi, err := os.Open("config/LevelData.txt")
 	if err != nil {
 		panic(err)
@@ -69,13 +70,28 @@ func (config *LevelDataMgr) Load() {
 	}
 }
 
-func (*LevelDataMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
+func (config *LevelDataMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
 	datacols := strings.Split(dataline, "\t")
 	datastruct := new(LevelData)
 	if len(datatypes) != len(datacols) {
 		fmt.Printf("read data error %!s(MISSING) \n", dataline)
 		return
     }
-	datastruct.id=getIntValue(datacols[0])
-	datastruct.exp=getInt64Value(datacols[1])
+	datastruct.Id=getIntValue(datacols[0])
+	datastruct.Exp=getInt64Value(datacols[1])
+	config.mapdata[datastruct.Id]=datastruct
 }
+
+func (config *LevelDataMgr) UnLoad() {
+}
+
+func (config *LevelDataMgr) GetConfig( id int) *LevelData{
+	 data, ok := config.mapdata[id]
+	 if ok != true {
+		 return nil
+	 }
+	 return data
+}
+
+var LevelDataMgrInst = &LevelDataMgr{}
+

@@ -9,18 +9,19 @@ import (
 )
 
 var typedefsRoleLevelData="int	int"
-var iddefsRoleLevelData="id	next_exp"
+var iddefsRoleLevelData="Id	Next_exp"
 
 type RoleLevelData struct {
-	   id		int
-	   next_exp		int
+	   Id		int
+	   Next_exp		int
 }
 
 type RoleLevelDataMgr struct {
-	   mapdata 		map[int] RoleLevelData
+	   mapdata 		map[int] *RoleLevelData
 }
 
 func (config *RoleLevelDataMgr) Load() {
+	config.mapdata = make(map[int] *RoleLevelData)
 	fi, err := os.Open("config/RoleLevelData.txt")
 	if err != nil {
 		panic(err)
@@ -69,13 +70,28 @@ func (config *RoleLevelDataMgr) Load() {
 	}
 }
 
-func (*RoleLevelDataMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
+func (config *RoleLevelDataMgr) loadOneLine(dataline string, datatypes []string, dataids []string) {
 	datacols := strings.Split(dataline, "\t")
 	datastruct := new(RoleLevelData)
 	if len(datatypes) != len(datacols) {
 		fmt.Printf("read data error %!s(MISSING) \n", dataline)
 		return
     }
-	datastruct.id=getIntValue(datacols[0])
-	datastruct.next_exp=getIntValue(datacols[1])
+	datastruct.Id=getIntValue(datacols[0])
+	datastruct.Next_exp=getIntValue(datacols[1])
+	config.mapdata[datastruct.Id]=datastruct
 }
+
+func (config *RoleLevelDataMgr) UnLoad() {
+}
+
+func (config *RoleLevelDataMgr) GetConfig( id int) *RoleLevelData{
+	 data, ok := config.mapdata[id]
+	 if ok != true {
+		 return nil
+	 }
+	 return data
+}
+
+var RoleLevelDataMgrInst = &RoleLevelDataMgr{}
+

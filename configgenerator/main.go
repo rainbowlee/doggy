@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
-	"strconv"
 	"container/list"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	//"errors"
 	"strings"
 )
@@ -38,10 +38,10 @@ func processtypeline(typeline string) (coltypes []string) {
 			datattypes = append(datattypes, "float32")
 		} else if coltype == "string" {
 			datattypes = append(datattypes, "string")
-        } else if coltype == "LANGUAGE" {
+		} else if coltype == "LANGUAGE" {
 			datattypes = append(datattypes, "string")
 		}
-        
+
 	}
 
 	return datattypes
@@ -49,9 +49,14 @@ func processtypeline(typeline string) (coltypes []string) {
 
 func processidline(idline string) (colids []string) {
 	colids = strings.Split(idline, "\t")
-	return
+	var retcolids = []string{}
+	for _, value := range colids {
+		char0 := value[0] - 32
+		newvalue := string(char0) + value[1:]
+		retcolids = append(retcolids, newvalue)
+	}
+	return retcolids
 }
-
 
 func generate(name string, typeline string, idline string) {
 	a := strings.Split(name, ".")
@@ -92,8 +97,8 @@ func generate(name string, typeline string, idline string) {
 		return
 	}
 
-	w.WriteString("var typedefs" + configFileNameSrc + "=\"" + strings.Join(types,"\t") + "\"\n")
-	w.WriteString("var iddefs" + configFileNameSrc + "=\"" + strings.Join(ids,"\t") + "\"\n")	
+	w.WriteString("var typedefs" + configFileNameSrc + "=\"" + strings.Join(types, "\t") + "\"\n")
+	w.WriteString("var iddefs" + configFileNameSrc + "=\"" + strings.Join(ids, "\t") + "\"\n")
 	w.WriteString("\n")
 
 	//生成配置类
@@ -107,13 +112,15 @@ func generate(name string, typeline string, idline string) {
 
 	//生成管理类
 	w.WriteString("type " + configFileNameSrc + "Mgr" + " struct {\n")
-	w.WriteString("\t   mapdata " + "\t\t" + "map[" + types[0] + "] " + configFileNameSrc + "\n")
+	w.WriteString("\t   mapdata " + "\t\t" + "map[" + types[0] + "] *" + configFileNameSrc + "\n")
 	w.WriteString("}\n")
 	w.WriteString("\n")
 
 	//管理方法 load unload
 	readConfigFile := "config/" + configFileNameSrc + ".txt"
 	w.WriteString("func (config *" + configFileNameSrc + "Mgr) Load() {\n")
+	w.WriteString("\tconfig.mapdata = make(map[" + types[0] + "] *" + configFileNameSrc + ")\n")
+
 	w.WriteString("\tfi, err := os.Open(\"" + readConfigFile + "\")\n")
 	w.WriteString("\tif err != nil {\n")
 	w.WriteString("\t\tpanic(err)\n")
@@ -164,11 +171,11 @@ func generate(name string, typeline string, idline string) {
 		//chunks = append(chunks, buf...)
 	}`
 
-	loadcontent = fmt.Sprintf(loadcontent,configFileNameSrc,configFileNameSrc)
+	loadcontent = fmt.Sprintf(loadcontent, configFileNameSrc, configFileNameSrc)
 	w.WriteString("\t" + loadcontent + "\n")
 	w.WriteString("}\n\n")
 
-	online1 := `func (*%s) loadOneLine(dataline string, datatypes []string, dataids []string) {
+	online1 := `func (config *%s) loadOneLine(dataline string, datatypes []string, dataids []string) {
 	datacols := strings.Split(dataline, "\t")
 	datastruct := new(%s)
 	if len(datatypes) != len(datacols) {
@@ -176,7 +183,7 @@ func generate(name string, typeline string, idline string) {
 		return
     }`
 
-	online1 = fmt.Sprintf(online1, configFileNameSrc + "Mgr", configFileNameSrc)
+	online1 = fmt.Sprintf(online1, configFileNameSrc+"Mgr", configFileNameSrc)
 	w.WriteString(online1 + "\n")
 	for index := 0; index < len(types); index++ {
 		if types[index] == "int" {
@@ -187,18 +194,36 @@ func generate(name string, typeline string, idline string) {
 		}
 		if types[index] == "string" {
 			w.WriteString("\t" + "datastruct." + ids[index] + "=datacols[" + strconv.Itoa(index) + "]" + "\n")
-        }
-        
-        if types[index] == "float64" {
-			w.WriteString("\t" + "datastruct." + ids[index] + "=getFloat64Value(datacols[" + strconv.Itoa(index) + "])" + "\n")
-        } 
-        
-        if types[index] == "float32" {
-			w.WriteString("\t" + "datastruct." + ids[index] + "=getFloat32Value(datacols[" + strconv.Itoa(index) + "])" + "\n")
-		}  
-	}
+		}
 
+		if types[index] == "float64" {
+			w.WriteString("\t" + "datastruct." + ids[index] + "=getFloat64Value(datacols[" + strconv.Itoa(index) + "])" + "\n")
+		}
+
+		if types[index] == "float32" {
+			w.WriteString("\t" + "datastruct." + ids[index] + "=getFloat32Value(datacols[" + strconv.Itoa(index) + "])" + "\n")
+		}
+	}
+	w.WriteString("\tconfig.mapdata[datastruct." + ids[0] + "]=" + "datastruct\n")
 	w.WriteString("}\n")
+
+	w.WriteString("\n")
+	//unload
+	w.WriteString("func (config *" + configFileNameSrc + "Mgr) UnLoad() {\n")
+	w.WriteString("}\n")
+	w.WriteString("\n")
+
+	w.WriteString("func (config *" + configFileNameSrc + "Mgr) GetConfig( id " + types[0] + ") *" + configFileNameSrc + "{\n")
+	w.WriteString("\t data, ok := config.mapdata[id]\n")
+	w.WriteString("\t if ok != true {\n")
+	w.WriteString("\t\t return nil\n")
+	w.WriteString("\t }\n")
+	w.WriteString("\t return data\n")
+	w.WriteString("}\n")
+	w.WriteString("\n")
+
+	w.WriteString("var " + configFileNameSrc + "MgrInst = &" + configFileNameSrc + "Mgr{}\r\n")
+	w.WriteString("\n")
 	w.Flush()
 }
 
