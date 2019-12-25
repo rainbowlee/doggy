@@ -8,26 +8,28 @@ import (
 	"os"
 	"strconv"
 	//"errors"
-	"strings"
 	"doggy/common"
+	"strings"
 )
 
 // messagetype & messagemap MessageIdBase MessageIdHeader
 var (
-	MessageType = []string{"Dse", "Dce", "Drd", "Ddr", "Dsr", "Drs", "Dsw", "Dws"}	
-	MessageIdBase = []int{1000, 2000, 3000, 4000, 5000,6000, 7000, 8000}
-	MessageIdHeader = []string{"EVENT_SE", "EVENT_CE", "EVENT_RD", "EVENT_DR", "EVENT_SR", "EVENT_RS", "EVENT_SW", "EVENT_WS"}	
+	MessageType     = []string{"Dse", "Dce", "Drd", "Ddr", "Dsr", "Drs", "Dsw", "Dws"}
+	MessageIdBase   = []int{1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000}
+	MessageIdHeader = []string{"EVENT_SE", "EVENT_CE", "EVENT_RD", "EVENT_DR", "EVENT_SR", "EVENT_RS", "EVENT_SW", "EVENT_WS"}
 
-	MessageDefs = make(map[string] *list.List)	 //最新配置文件
-	MessageDefOlds = make(map[string] *list.List)//原有定义 EventId文件读取
+	MessageDefs    = make(map[string]*list.List) //最新配置文件
+	MessageDefOlds = make(map[string]*list.List) //原有定义 EventId文件读取
 
-	MessageMap = make(map[string] string)
-	MessageMapOld = make(map[string] string)
+	MessageMap    = make(map[string]string)
+	MessageMapOld = make(map[string]string)
+
+	MessageHandler = []string{}
 )
 
-func getMessageTypeAndIndex(message string) (index int){
-	for index, value := range MessageType{
-		if message[:3] == value{
+func getMessageTypeAndIndex(message string) (index int) {
+	for index, value := range MessageType {
+		if message[:3] == value {
 			return index
 		}
 	}
@@ -35,13 +37,13 @@ func getMessageTypeAndIndex(message string) (index int){
 	return -1
 }
 
-func getMessageIdFromEventIdLine(line string) (messageid string){
-	for _, value := range MessageIdHeader{
+func getMessageIdFromEventIdLine(line string) (messageid string) {
+	for _, value := range MessageIdHeader {
 		findindex := strings.Index(line, value)
-		if findindex != -1{
+		if findindex != -1 {
 			findindex2 := strings.Index(line, " = ")
 
-			messageid = line[findindex+len(MessageIdHeader[0])+1:findindex2]//多一个—
+			messageid = line[findindex+len(MessageIdHeader[0])+1 : findindex2] //多一个—
 			return messageid
 		}
 	}
@@ -49,80 +51,169 @@ func getMessageIdFromEventIdLine(line string) (messageid string){
 	return ""
 }
 
-func dellist(l *list.List, value string){
-	for iter := l.Front(); iter != nil ; iter.Next(){
-		if iter.Value == value{
+func dellist(l *list.List, value string) {
+	for iter := l.Front(); iter != nil; iter.Next() {
+		if iter.Value == value {
 			l.Remove(iter)
 			return
 		}
 	}
 }
 
-func genEventFile(){
-	fi, error := os.Create("../event/EventId.go")
+func genEventFile() {
+	fi, error := os.Create("../eventhandler/EventId.go")
 	if error != nil {
 		panic(error)
 	}
 	defer fi.Close()
 
 	w := bufio.NewWriter(fi)
-	w.WriteString("package event \n")
+	w.WriteString("package eventhandler \n")
 	w.WriteString("\n")
 
-	//oldsDel := []string{}
-	//newsDel := []string{}
-	//需要做点事情
-	//old表里的数据。
-	//如果new存在， 则new删除
-	//如果new不存在，则从old删除
-
-	for index, typevalue := range MessageType{
-		w.WriteString("//event id for " + typevalue + "\n")			
+	for index, typevalue := range MessageType {
+		w.WriteString("//event id for " + typevalue + "\n")
 		w.WriteString("const (\n")
 
-		MessageIdHeader 	:= MessageIdHeader[index]
-		BaseId				:= MessageIdBase[index]
+		MessageHandler = []string{}
+		MessageIdHeader := MessageIdHeader[index]
+		BaseId := MessageIdBase[index]
 
 		l, ok := MessageDefOlds[typevalue]
-		if(ok == true){
+		if ok == true {
 			for i := l.Front(); i != nil; i = i.Next() {
-				valuestr, _:=i.Value.(string)	
+				valuestr, _ := i.Value.(string)
 				_, ok := MessageMap[valuestr]
-				if ok == false{
+				if ok == false {
 					continue
 				}
-				genOneEventHandler(typevalue,valuestr, MessageIdHeader +"_" + valuestr)
-				outvalue := fmt.Sprintf("\t" + MessageIdHeader +"_%s = %d\n", i.Value, BaseId)
+				genOneEventHandler(typevalue, valuestr, MessageIdHeader+"_"+valuestr)
+				outvalue := fmt.Sprintf("\t"+MessageIdHeader+"_%s = %d\n", i.Value, BaseId)
 				BaseId = BaseId + 1
-				w.WriteString(outvalue)	
+				w.WriteString(outvalue)
 			}
 		}
 
 		l, ok = MessageDefs[typevalue]
-		if(ok == true){
+		if ok == true {
 			for i := l.Front(); i != nil; i = i.Next() {
-				valuestr, _:=i.Value.(string)					
+				valuestr, _ := i.Value.(string)
 				_, ok := MessageMapOld[valuestr]
-				if ok == true{
+				if ok == true {
 					continue
-				}				
-				genOneEventHandler(typevalue,valuestr, MessageIdHeader +"_" + valuestr)
-				outvalue := fmt.Sprintf("\t" + MessageIdHeader +"_%s = %d\n", i.Value, BaseId)
-				BaseId = BaseId + 1	
-				w.WriteString(outvalue)	
+				}
+				genOneEventHandler(typevalue, valuestr, MessageIdHeader+"_"+valuestr)
+				outvalue := fmt.Sprintf("\t"+MessageIdHeader+"_%s = %d\n", i.Value, BaseId)
+				BaseId = BaseId + 1
+				w.WriteString(outvalue)
 			}
 		}
 
-		w.WriteString(")\n\n\n")	
+		w.WriteString(")\n\n\n")
+
+		genEventDispatcher(typevalue)
 	}
 
 	w.Flush()
 }
 
+func genEventDispatcher(messageType string) {
+	fmt.Println("genEventDispatcher", messageType)
+	name := "../eventhandler/" + messageType + "EventDispatcher.go"
+	fi, error := os.Create(name)
+	if error != nil {
+		panic(error)
+	}
+	defer fi.Close()
+
+	w := bufio.NewWriter(fi)
+	w.WriteString("package eventhandler \n")
+	w.WriteString("\n")
+	w.WriteString("import (\n")
+	w.WriteString("\t\"doggy/common\"\n")
+//	w.WriteString("\t\"fmt\"\n")	
+//	w.WriteString("\t\"strconv\"\n")	
+	w.WriteString(")\n")
+	w.WriteString("\n")
+
+	dipatchertext := `
+type %sEventDispatcher struct {
+	common.EventDispatcher
+}
+/*
+func (dispatcher *%sEventDispatcher) RegisterEventHandler(eventid int, eventhandler* common.EventHandler) {
+	dispatcher.mapHandlers[eventid] = eventhandler
+}
+
+func (dispatcher *%sEventDispatcher) Dispach(event *common.Event) {
+	handlerdef, ok :=dispatcher.mapHandlers[event.EventId]
+	if ok == true{
+		handlerdef.Handle(event)
+	} else{
+		fmt.Println("undefied msg " + strconv.Itoa(event.EventId) + "\n")
+	}
+}
+
+func (dispatcher *%sEventDispatcher) Init(){
+	dispatcher.mapHandlers = make(map[int]*EventHandler)
+}
+*/
+
+func %sEventDispatcherInst() *%sEventDispatcher{
+	return &dispatcher%s
+}
+
+var dispatcher%s = %sEventDispatcher{}
+`
+	dipatchertext = fmt.Sprintf(dipatchertext, messageType, messageType, messageType, messageType, messageType, messageType, messageType, messageType, messageType)
+	w.WriteString(dipatchertext)
+	w.WriteString("\n")
+
+	w.Flush()
+}
+
 //messageId
-func genOneEventHandler(messageType string, messageDef string, messageId string){
+func genOneEventHandler(messageType string, messageDef string, messageId string) {
 	fmt.Println(messageType, messageDef, messageId)
-	osext.FileExist(messageType)
+	name := "../eventhandler/" + messageDef + "Handler.go"
+	common.FileExist(name)
+
+	//eventhandler :=new(common.EventHandler)
+	//eventhandler.Handle()
+
+	fi, error := os.Create(name)
+	if error != nil {
+		panic(error)
+	}
+	defer fi.Close()
+
+	w := bufio.NewWriter(fi)
+	w.WriteString("package eventhandler \n")
+	w.WriteString("\n")
+	w.WriteString("import (\n")
+	w.WriteString("\t\"doggy/common\"\n")
+	w.WriteString(")\n")
+	w.WriteString("\n")
+
+	handlerText := `
+type %s struct {
+}
+
+func (eventhandler *%s) Register() {
+	%s
+}
+
+func (eventhandler *%s) Handle(event*common.Event) {
+
+}`
+
+	param1 := messageDef + "Handler"
+	param2 := messageType + "EventDispatcherInst().RegisterEventHandler(" + messageId + ", (*common.EventHandler)(eventhandler))"
+
+	handlerText = fmt.Sprintf(handlerText, param1, param1,param2,param1)
+	w.WriteString(handlerText)
+	w.Flush()
+	MessageHandler = append(MessageHandler, param1)
 }
 
 func processtypeline(typeline string) (coltypes []string) {
@@ -341,19 +432,19 @@ func generate(name string, typeline string, idline string) {
 	w.Flush()
 }
 
-func readeventidfile(){
-	name := "../Event/EventId.go"	
+func readeventidfile() {
+	name := "../eventhandler/EventId.go"
 	fmt.Println("readeventidfile  ", name)
 	fi, err := os.Open(name)
 	if err != nil {
-		panic(err)
+		return
 	}
-	
+
 	defer fi.Close()
 	r := bufio.NewReader(fi)
 
 	for {
-		buf, isPrefix,err := r.ReadLine()
+		buf, isPrefix, err := r.ReadLine()
 		if err != nil && err != io.EOF {
 			panic(err)
 		}
@@ -363,13 +454,12 @@ func readeventidfile(){
 		}
 
 		lineContent := string(buf)
-	
-	
+
 		if buf == nil {
 			break
 		}
 
-		if len(buf) == 0{
+		if len(buf) == 0 {
 			continue
 		}
 
@@ -379,10 +469,10 @@ func readeventidfile(){
 
 		//message 后一个空格
 		messsageid := getMessageIdFromEventIdLine(lineContent)
-		if messsageid != ""{
+		if messsageid != "" {
 			typeindex := getMessageTypeAndIndex(messsageid)
 			messagetype := MessageType[typeindex]
-			l,ok := MessageDefOlds[messagetype]
+			l, ok := MessageDefOlds[messagetype]
 			if ok == false {
 				l = list.New()
 				MessageDefOlds[messagetype] = l
@@ -391,7 +481,7 @@ func readeventidfile(){
 			MessageMapOld[messsageid] = messsageid
 		}
 		fmt.Println(messsageid)
-	}	
+	}
 }
 
 func readprotofile(name string) {
@@ -400,12 +490,12 @@ func readprotofile(name string) {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	defer fi.Close()
 	r := bufio.NewReader(fi)
 
 	for {
-		buf, isPrefix,err := r.ReadLine()
+		buf, isPrefix, err := r.ReadLine()
 		if err != nil && err != io.EOF {
 			panic(err)
 		}
@@ -415,13 +505,12 @@ func readprotofile(name string) {
 		}
 
 		lineContent := string(buf)
-	
-	
+
 		if buf == nil {
 			break
 		}
 
-		if len(buf) == 0{
+		if len(buf) == 0 {
 			continue
 		}
 
@@ -437,24 +526,24 @@ func readprotofile(name string) {
 			index3 := strings.Index(message, " ")
 
 			index := len(message)
-			if index2 != -1 && index > index2{
+			if index2 != -1 && index > index2 {
 				index = index2
 			}
 
-			if index3 != -1 && index > index3{
+			if index3 != -1 && index > index3 {
 				index = index3
 			}
-			
+
 			messagedef := message[:index]
 
 			messagetypeindex := getMessageTypeAndIndex(messagedef)
-			if messagetypeindex == -1{
+			if messagetypeindex == -1 {
 				fmt.Println("error messagedef:", messagedef)
-			}else{
+			} else {
 				messgetype := MessageType[messagetypeindex]
 				//v2, ok2 := m["x"]
 				typelist, exists := MessageDefs[messgetype]
-				if exists == false{
+				if exists == false {
 					typelist = list.New()
 					MessageDefs[messgetype] = typelist
 				}
@@ -466,10 +555,9 @@ func readprotofile(name string) {
 	}
 }
 
-
 func main() {
 	l := list.New()
-	f,err := os.Open(".")
+	f, err := os.Open(".")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -485,7 +573,7 @@ func main() {
 		fmt.Printf(" index %d name %s \n", i, fileExt)
 		if fileExt == "proto" {
 			l.PushBack(name)
-			readprotofile(name);
+			readprotofile(name)
 		}
 		i++
 	}

@@ -1,4 +1,4 @@
-package osext
+package common
 
 import(
 	"os"
