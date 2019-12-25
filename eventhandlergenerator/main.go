@@ -58,7 +58,7 @@ func dellist(l *list.List, value string){
 	}
 }
 
-func genEventIdFile(){
+func genEventFile(){
 	fi, error := os.Create("../event/EventId.go")
 	if error != nil {
 		panic(error)
@@ -91,10 +91,10 @@ func genEventIdFile(){
 				if ok == false{
 					continue
 				}
+				genOneEventHandler(typevalue,valuestr, MessageIdHeader +"_" + valuestr)
 				outvalue := fmt.Sprintf("\t" + MessageIdHeader +"_%s = %d\n", i.Value, BaseId)
 				BaseId = BaseId + 1
-	
-				w.WriteString(outvalue)
+				w.WriteString(outvalue)	
 			}
 		}
 
@@ -106,10 +106,10 @@ func genEventIdFile(){
 				if ok == true{
 					continue
 				}				
+				genOneEventHandler(typevalue,valuestr, MessageIdHeader +"_" + valuestr)
 				outvalue := fmt.Sprintf("\t" + MessageIdHeader +"_%s = %d\n", i.Value, BaseId)
-				BaseId = BaseId + 1
-	
-				w.WriteString(outvalue)
+				BaseId = BaseId + 1	
+				w.WriteString(outvalue)	
 			}
 		}
 
@@ -117,6 +117,12 @@ func genEventIdFile(){
 	}
 
 	w.Flush()
+}
+
+//messageId
+func genOneEventHandler(messageType string, messageDef string, messageId string){
+	fmt.Println(messageType, messageDef, messageId)
+	osext.FileExist(messageType)
 }
 
 func processtypeline(typeline string) (coltypes []string) {
@@ -484,5 +490,5 @@ func main() {
 		i++
 	}
 	readeventidfile()
-	genEventIdFile()	
+	genEventFile()
 }
