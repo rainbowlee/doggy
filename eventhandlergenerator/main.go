@@ -167,10 +167,14 @@ var dispatcher%s = %sEventDispatcher{}
 func genOneEventHandler(messageType string, messageDef string, messageId string) {
 	fmt.Println(messageType, messageDef, messageId)
 	name := "../eventhandler/" + messageDef + "Handler.go"
-	common.FileExist(name)
+	isFileExists := common.FileExist(name)
 
-	//eventhandler :=new(common.EventHandler)
-	//eventhandler.Handle()
+	param1 := messageDef + "Handler"
+	param2 := messageType + "EventDispatcherInst().RegisterEventHandler(" + messageId + ", (*common.EventHandler)(eventhandler))"
+	MessageHandler = append(MessageHandler, param1)
+	if isFileExists == true{
+		return
+	} 
 
 	fi, error := os.Create(name)
 	if error != nil {
@@ -198,13 +202,11 @@ func (eventhandler *%s) Handle(event*common.Event) {
 
 }`
 
-	param1 := messageDef + "Handler"
-	param2 := messageType + "EventDispatcherInst().RegisterEventHandler(" + messageId + ", (*common.EventHandler)(eventhandler))"
+
 
 	handlerText = fmt.Sprintf(handlerText, param1, param1,param2,param1)
 	w.WriteString(handlerText)
 	w.Flush()
-	MessageHandler = append(MessageHandler, param1)
 }
 
 func processtypeline(typeline string) (coltypes []string) {
