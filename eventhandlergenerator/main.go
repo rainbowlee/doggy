@@ -140,24 +140,11 @@ func genEventDispatcher(messageType string) {
 type %sEventDispatcher struct {
 	common.EventDispatcher
 }
-/*
-func (dispatcher *%sEventDispatcher) RegisterEventHandler(eventid int, eventhandler* common.EventHandler) {
-	dispatcher.mapHandlers[eventid] = eventhandler
-}
 
-func (dispatcher *%sEventDispatcher) Dispach(event *common.Event) {
-	handlerdef, ok :=dispatcher.mapHandlers[event.EventId]
-	if ok == true{
-		handlerdef.Handle(event)
-	} else{
-		fmt.Println("undefied msg " + strconv.Itoa(event.EventId) + "\n")
-	}
+func (dispatcher *%sEventDispatcher) RegisterHandlers(){
+	dispatcher.Init()
+	%s
 }
-
-func (dispatcher *%sEventDispatcher) Init(){
-	dispatcher.mapHandlers = make(map[int]*EventHandler)
-}
-*/
 
 func %sEventDispatcherInst() *%sEventDispatcher{
 	return &dispatcher%s
@@ -165,7 +152,11 @@ func %sEventDispatcherInst() *%sEventDispatcher{
 
 var dispatcher%s = %sEventDispatcher{}
 `
-	dipatchertext = fmt.Sprintf(dipatchertext, messageType, messageType, messageType, messageType, messageType, messageType, messageType, messageType, messageType)
+	messageregisters := "\n"
+	for _, value := range MessageHandler{
+		messageregisters += "\tnew(" + value + ").Register()\n"
+	}
+	dipatchertext = fmt.Sprintf(dipatchertext, messageType, messageType, messageregisters,messageType, messageType, messageType, messageType,messageType)
 	w.WriteString(dipatchertext)
 	w.WriteString("\n")
 
