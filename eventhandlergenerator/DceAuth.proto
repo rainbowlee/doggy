@@ -1,0 +1,23 @@
+//#package Event; //前4行请复制粘贴，为C#生成protobuf使用
+//#import "google/protobuf/csharp_options.proto";
+//#option (google.protobuf.csharp_file_options).namespace = "Google.Proto.Event";
+//#option optimize_for = SPEED;
+
+//!CS
+//认证
+syntax="proto2";
+message DceAuth
+{
+	optional string userid 					= 1;	//id
+	optional string secret					= 2;	//密码
+}
+
+message DseAuth
+{
+	required bool pass 							= 1;	//是否认证通过
+	required int32 type 						= 2;	//未通过原因(1.checkSecret; 2.封停)
+	required int32 leftMin 					= 3;	//剩余时间
+	optional string reason 					= 4;	//封禁原因
+	required bool todayfirstlogin 	= 5;	//是否今日首次登陆
+	optional int32 userid 					= 6;	//玩家真正ID，用于测试环境
+}

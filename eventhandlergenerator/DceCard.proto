@@ -1,0 +1,83 @@
+//#package Event; //前4行请复制粘贴，为C#生成protobuf使用
+//#import "google/protobuf/csharp_options.proto";
+//#option (google.protobuf.csharp_file_options).namespace = "Google.Proto.Event";
+//#option optimize_for = SPEED;
+
+//!CS
+syntax="proto2";
+//卡牌
+
+//卡牌
+message CardData
+{
+	optional string   		uid       			= 1; //唯一id
+	optional int32			tblid				= 2; //卡牌表id
+	optional int32			level				= 3; //卡牌等级
+	optional int32			advancelv			= 4; //进阶等级
+}
+
+//卡组
+message CardGroup
+{
+	optional string	name			= 1; //卡组名称
+	optional string	maincard		= 2; //卡组主将uid
+	repeated string	cardlist		= 3; //卡组卡牌uid
+}
+
+//同步所有卡牌和卡组数据
+message DseCardSendData
+{
+	repeated CardData cardlist		= 1; //卡牌列表
+	repeated CardGroup grouplist	= 2; //卡组列表
+}
+
+//同步单张卡牌数据
+message DseCardSendSingleData
+{
+	optional CardData carddata			= 1; //单张卡牌数据
+}
+
+//卡组重命名
+message DceCardGroupRename
+{
+	optional int32 groupid				= 1; //卡组id
+	optional string name				= 2; //卡组名字
+}
+
+message DseCardGroupRename
+{
+	optional int32 errorcode		= 1; //操作结果
+	optional int32 groupid			= 2; //卡组id
+	optional string name			= 3; //卡组名字
+}
+
+//设置主将
+message DceCardSetMainCard
+{
+	optional int32 groupid		= 1; //卡组id
+	optional string maincardid	= 2; //主将id
+}
+
+message DseCardSetMainCard
+{
+	optional int32 errorcode		= 1; //操作结果
+	optional int32 groupid			= 2; //卡组id
+	optional string maincardid		= 3; //主将id
+}
+
+//设置卡组
+message DceCardSetCardGroup
+{
+	optional int32 groupid				= 1; //卡组id
+	repeated string cardlist				= 2; //卡牌id列表
+}
+
+message DseCardSetCardGroup
+{
+	optional int32 errorcode		= 1; //操作结果
+	optional int32 groupid			= 2; //卡组id
+	repeated string cardlist		= 3; //卡牌id列表
+}
+
+
+
