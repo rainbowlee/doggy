@@ -1,0 +1,6 @@
+#register_body {
+    background-image: url("/static/css/img/chair.jpg");
+    background-color: rgba(219, 215, 212, 0.45);
+    background-size: cover;
+    display: block;
+}

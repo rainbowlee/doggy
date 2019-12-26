@@ -10,6 +10,8 @@ import (
 	"github.com/golang/glog"
 	"os"
 	"strconv"
+	"strings"
+	"net/url"
 )
 
 
@@ -18,6 +20,21 @@ var t = template.Must(template.ParseGlob("views/*"))
 type MyHandler struct{
 
 }
+
+// aa
+func HandlerFuncStatic(w http.ResponseWriter, r *http.Request, h http.Handler, prefix string) {
+	if p := strings.TrimPrefix(r.URL.Path, prefix); len(p) < len(r.URL.Path) {
+		r2 := new(http.Request)
+		*r2 = *r
+		r2.URL = new(url.URL)
+		*r2.URL = *r.URL
+		r2.URL.Path = p
+		h.ServeHTTP(w, r2)
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
 
 func (*MyHandler) ServeHTTP( w http.ResponseWriter, r *http.Request){
 	fmt.Println("MyHandler ServeHTTP")
@@ -33,8 +50,17 @@ func (*MyHandler) ServeHTTP( w http.ResponseWriter, r *http.Request){
 		glog.Info("b request")	
 		io.WriteString(w, "b!\n")
 		break;
+//	case "/static/":
+//		http.StripPrefix("/static/", fs)
+//		break;
 	default:
-		io.WriteString(w, "Hello, TLS!\n")
+		index := strings.Index(r.URL.Path,"/static/")
+		if index == 0{
+			HandlerFuncStatic(w,r,fs,"/static/")
+			//http.StripPrefix("/static/", fs)
+		} else{
+			io.WriteString(w, "Hello, TLS!\n")
+		}
 	}
 
 	/*
@@ -49,12 +75,17 @@ func (*MyHandler) ServeHTTP( w http.ResponseWriter, r *http.Request){
 
 }
 
+var fs = http.FileServer(http.Dir("static"))	
+
 func main() {
 	for idx, args := range os.Args {
         fmt.Println("参数" + strconv.Itoa(idx) + ":", args)
 	}
 		
 	flag.Parse()
+	//fs := http.FileServer(http.Dir("static"))	
+	//http.Handle("/static/", )	
+
 	s := &http.Server{
 		Addr:           ":8080",
 		Handler:        new(MyHandler),
