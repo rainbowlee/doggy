@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"net/url"
+	"doggy/common"
 )
 
 
@@ -37,7 +38,7 @@ func HandlerFuncStatic(w http.ResponseWriter, r *http.Request, h http.Handler, p
 
 
 func (*MyHandler) ServeHTTP( w http.ResponseWriter, r *http.Request){
-	fmt.Println("MyHandler ServeHTTP")
+	fmt.Println("MyHandler ServeHTTP", r.URL.Path)
 	//w.WriteContent("aaaaaaa")
 
 	switch r.URL.Path{
@@ -53,13 +54,26 @@ func (*MyHandler) ServeHTTP( w http.ResponseWriter, r *http.Request){
 //	case "/static/":
 //		http.StripPrefix("/static/", fs)
 //		break;
+	case "/login":
+		//io.WriteString(w, "a!\n")
+		glog.Info("login request")
+		renderTemplate(w, "login.html", "hello a!")
+		break;
+	case "/":
+		//io.WriteString(w, "a!\n")
+		glog.Info("index request")
+		renderTemplate(w, "index.html", "hello a!")
+		break;	
 	default:
 		index := strings.Index(r.URL.Path,"/static/")
 		if index == 0{
 			HandlerFuncStatic(w,r,fs,"/static/")
 			//http.StripPrefix("/static/", fs)
-		} else{
-			io.WriteString(w, "Hello, TLS!\n")
+		} else if common.StingsEndWith(r.URL.Path, ".html"){
+			renderTemplate(w, r.URL.Path[1:], "")
+		}else{
+			//io.WriteString(w, "Hello, TLS!\n")
+			http.Redirect(w,r,"/login",301)
 		}
 	}
 
