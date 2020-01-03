@@ -164,20 +164,35 @@ func BoottimeSettlement(datekey string){
 	yesterday := localTime.Add(daytime)
 	beforeyesterday := localTime.Add(daytime*2)
 
-	//yesterdaykey := GetDateKey(yesterday)
+	yesterdaykey := GetDateKey(&yesterday)
 	beforeyesterdaykey := GetDateKey(&beforeyesterday)
 	_= beforeyesterdaykey
-	for {
-		//conn := RedisPool.Get()
 
-		_,value, error := RedisClient.SScan(GetAddNewUserKey() + "_" + beforeyesterdaykey, 0, "*", 100).Result()
+	conn := RedisPool.Get()
+	defer conn.Close()
+	var offset uint64 = 0
+	var relogincount int = 0
+	var allcount int  = 0
+	for{
+		pagedata, cursor, error := RedisClient.SScan(beforeyesterdaykey + "_" + GetAddNewUserKey(), offset, "*", 10).Result()
+		for _, value := range pagedata {
+			r, error := conn.Do("bf.exists", yesterdaykey + "_" + GetAddUserKey(), value)
+			//fmt.Println(r, error, value)
+			if r.(int64) == 1 {
+				relogincount = relogincount + 1
+			}
+		}
 
-		fmt.Println(value, error)
+		allcount += len(pagedata)
 
-		//value, error := conn.Do("sscan", GetAddNewUserKey() + "_" + beforeyesterdaykey, 0, 100)
+		offset = cursor
+		fmt.Println(pagedata, cursor, error)	
+		if error != nil || len(pagedata) == 0 || cursor == 0{
+			break
+		}
 	}
 
-
+	fmt.Println(" next day login ", relogincount, allcount)
 	//计算前天的次留
 	fmt.Println(datestarttime)
 	fmt.Println(localTime)
