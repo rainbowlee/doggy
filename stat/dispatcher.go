@@ -102,8 +102,9 @@ func Dispatch(line string){
 			}
 		}
 */
-//		value, error := conn.Do("sscan", dateKey + "_" + addnewuserkey, 0, "match *", "count 100")
-//		fmt.Println(value, error)	
+		// 正确的使用方式
+		//value, error := conn.Do("sscan", dateKey + "_" + addnewuserkey, 0, "match", "*", "count", "100")
+		//fmt.Println(value, error)	
 
 		//value, ok = conn.Do("bf.exists", dateKey + "_" + adduserkey, userId)	
 		//if ok != nil {
@@ -176,7 +177,7 @@ func BoottimeSettlement(datekey string){
 	for{
 		pagedata, cursor, error := RedisClient.SScan(beforeyesterdaykey + "_" + GetAddNewUserKey(), offset, "*", 10).Result()
 		for _, value := range pagedata {
-			r, error := conn.Do("bf.exists", yesterdaykey + "_" + GetAddUserKey(), value)
+			r, _ := conn.Do("bf.exists", yesterdaykey + "_" + GetAddUserKey(), value)
 			//fmt.Println(r, error, value)
 			if r.(int64) == 1 {
 				relogincount = relogincount + 1
