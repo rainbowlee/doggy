@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
+	_ "math/rand"
 	"github.com/Shopify/sarama"
 	"log"
+	_ "errors"
 )
 
 var(
@@ -17,6 +18,10 @@ func InitKafuka(kahost string) {
 	//go ConsumeKafka(kahost, &EndChan)
 }
 
+func CloseKafKa(){
+	EndChan <- true 
+}
+
 func ProduceKafka(kahost string, produceMsg *chan string, endchan *chan bool) {
 	fmt.Println("ProdceKafka") 
 	config := sarama.NewConfig()
@@ -26,33 +31,43 @@ func ProduceKafka(kahost string, produceMsg *chan string, endchan *chan bool) {
 	config.Producer.Return.Errors = true	
 	//config.Producer.Partitioner = sarama.NewManualPartitioner
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
+	config.Version = sarama.V0_11_0_0
+	//var err errors.Error
 	producer, err := sarama.NewSyncProducer([]string{kahost}, config)
 	if err != nil {
 		return
 	}
 
 	defer producer.Close()
-
-		
+	for{
+		select {
+		case <- *endchan://end
+			return
+		case data, _ := (<-*produceMsg)://生产一个消息
+			msg:= &sarama.ProducerMessage{}
+			msg.Topic = "gamelogtopic"
+			msg.Key = sarama.StringEncoder("iles")
+			msg.Value = sarama.StringEncoder(data)
+			msg.Partition = 0
+			// 发送消息
+			pid, offset, err := producer.SendMessage(msg)
+			fmt.Println(pid, offset, err)
+		default:
+		}
+	}
+	/*
 	// 定义一个生产消息，包括Topic、消息内容、
 	for{
 		msg:= &sarama.ProducerMessage{}
-		msg.Topic = "revolution"
+		msg.Topic = "gamelogtest"
 		msg.Key = sarama.StringEncoder("iles")
 		msg.Value = sarama.StringEncoder("hello world...")
 		msg.Partition = int32(rand.Int()% 5)
 		// 发送消息
 		pid, offset, err := producer.SendMessage(msg)
 		fmt.Println(pid, offset, err)
-
-		msg2 := &sarama.ProducerMessage{}
-		msg2.Topic = "revolution"
-		msg2.Key = sarama.StringEncoder("onroe")
-		msg2.Value = sarama.StringEncoder("hello world2...")
-		msg2.Partition = 2 //int32(rand.It()%5)
-		pid2, offset2, err := producer.SendMessage(msg2)
-		fmt.Println(pid2,  offset2, err)
 	} 
+	*/
 }
 
 

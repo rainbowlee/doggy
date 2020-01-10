@@ -11,6 +11,10 @@ const(
 	AddNewUser = "addnewuser" // cmd id
 	AddUser = "adduser"	// cmd id
 	ReCal	= "recal"	// cmd datekey(2019_1_3)
+	GameLog = "gamelog"
+
+
+
 )
 
 func recoverfromerror() {  
@@ -130,7 +134,11 @@ func Dispatch(line string){
 	case ReCal:
 		datekey := datas[1]
 		BoottimeSettlement(datekey)
+	case GameLog:
+		datekey := datas[1]	
+		ProuceMsg <- datekey
 	}
+
 }
 
 
