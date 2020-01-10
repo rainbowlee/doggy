@@ -46,14 +46,14 @@ func main() {
 	var port int
 	var multicore bool
 	// Example command: go run echo.go --port 9000 --multicore=true
-	flag.IntVar(&port, "port", 9000, "--port 9000")
+	flag.IntVar(&port, "port", 9003, "--port 9000")
 	flag.BoolVar(&multicore, "multicore", true, "--multicore true")
 	flag.Parse()
 
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.AddConfigPath(".")      // optionally look for config in the working directory
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil { // Handle errors reading the config file
+	err := viper.ReadInConfig()   // Find and read the config file
+	if err != nil {               // Handle errors reading the config file
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
@@ -67,7 +67,7 @@ func main() {
 	InitKafuka(kahost)
 	go BoottimeTimingSettlement()
 
-	linecodec:=	new(gnet.LineBasedFrameCodec)
+	linecodec := new(gnet.LineBasedFrameCodec)
 	echo := new(statServer)
 	log.Fatal(gnet.Serve(echo, fmt.Sprintf("tcp://:%d", port), gnet.WithMulticore(multicore), gnet.WithCodec(linecodec)))
 }
