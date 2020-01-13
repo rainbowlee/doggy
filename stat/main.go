@@ -3,44 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
-
-	"github.com/panjf2000/gnet"
+	//"log"
+	"os"
+	"os/signal"
+    "syscall"
 	"github.com/spf13/viper"
+	//"github.com/panjf2000/gnet"	
 )
 
-type statServer struct {
-	*gnet.EventServer
-}
-
-func (es *statServer) OnInitComplete(srv gnet.Server) (action gnet.Action) {
-	log.Printf("Echo server is listening on %s (multi-cores: %t, loops: %d)\n",
-		srv.Addr.String(), srv.Multicore, srv.NumLoops)
-	return
-}
-
-func (es *statServer) React(c gnet.Conn) (out []byte, action gnet.Action) {
-	// Echo synchronously.
-	out = c.ReadFrame()
-	if out != nil {
-		//line data
-		linedata := string(out)
-		//log.Info("read dataline %s", linedata)
-		log.Println("read dataline", linedata)
-		Dispatch(linedata)
-	}
-	return
-
-	/*
-		// Echo asynchronously.
-		data := append([]byte{}, frame...)
-		go func() {
-			time.Sleep(time.Second)
-			c.AsyncWrite(data)
-		}()
-		return
-	*/
-}
+var (
+	endchan    chan bool   = make(chan bool)
+)
 
 func main() {
 	var port int
@@ -67,7 +40,12 @@ func main() {
 	InitKafuka(kahost)
 	go BoottimeTimingSettlement()
 
-	linecodec := new(gnet.LineBasedFrameCodec)
-	echo := new(statServer)
-	log.Fatal(gnet.Serve(echo, fmt.Sprintf("tcp://:%d", port), gnet.WithMulticore(multicore), gnet.WithCodec(linecodec)))
+	go InitServer(multicore, port, &endchan)
+
+	c := make(chan os.Signal)
+	signal.Notify(c,syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-c
+	endchan <- true
+	CloseKafKa()
 }
+
